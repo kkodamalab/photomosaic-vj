@@ -511,3 +511,28 @@ canvas:fullscreen {
     flex-wrap: wrap;
   }
 }
+
+.effects-panel > summary {
+  color: var(--accent);
+  font-weight: 700;
+}
+.effect-state {
+  float: right;
+  font: 9px monospace;
+  color: var(--muted);
+}
+.effects-panel label {
+  flex-wrap: wrap;
+}
+.effects-panel label input[type="range"] {
+  flex: 1;
+  max-width: 56%;
+}
+.effects-panel output {
+  font: 10px monospace;
+  min-width: 30px;
+  text-align: right;
+}
+.effects-panel button {
+  width: 100%;
+}

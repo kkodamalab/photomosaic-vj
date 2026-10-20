@@ -2,14 +2,14 @@
 
 ## Phase 1の実装
 
-|領域|ファイル|責務|
-|---|---|---|
-|PHOTO DATABASE|src/database.ts, src/photo.worker.ts, src/exif.ts|逐次画像解析、縮小、IndexedDB、メタデータ|
-|CONTENT ENGINE|src/types.ts, src/renderer.ts の Mosaic|ContentPluginライフサイクル、文字/画像ターゲット、色距離による写真選択|
-|AUDIO SYNC|src/transport.ts|手動Transport、タップ中央値、位相、小節、ロック、NUDGE|
-|DUAL-DECK MIXER|src/renderer.ts の Renderer|独立バッファの合成、共有サムネイル、FREEZE|
-|CONTROLLER|src/main.ts|入力と状態、ライブUI、写真管理、BroadcastChannel送信|
-|OUTPUT|src/screen.ts|合成フレーム受信、16:9表示、全画面|
+| 領域            | ファイル                                          | 責務                                                                   |
+| --------------- | ------------------------------------------------- | ---------------------------------------------------------------------- |
+| PHOTO DATABASE  | src/database.ts, src/photo.worker.ts, src/exif.ts | 逐次画像解析、縮小、IndexedDB、メタデータ                              |
+| CONTENT ENGINE  | src/types.ts, src/renderer.ts の Mosaic           | ContentPluginライフサイクル、文字/画像ターゲット、色距離による写真選択 |
+| AUDIO SYNC      | src/transport.ts                                  | 手動Transport、タップ中央値、位相、小節、ロック、NUDGE                 |
+| DUAL-DECK MIXER | src/renderer.ts の Renderer                       | 独立バッファの合成、共有サムネイル、FREEZE                             |
+| CONTROLLER      | src/main.ts                                       | 入力と状態、ライブUI、写真管理、BroadcastChannel送信                   |
+| OUTPUT          | src/screen.ts                                     | 合成フレーム受信、16:9表示、全画面                                     |
 
 `ContentPlugin.render(RenderFrame)` と `dispose()` を共通ライフサイクルとします。RenderFrameに絶対時刻、拍位置、デッキ設定を渡します。今後のコンテンツレジストリでプラグインを差し替える予定です。現在のRendererはMosaicのみ生成します。
 
@@ -17,7 +17,7 @@ A/Bは写真ビットマップを共用し、ターゲットとタイル対応�
 
 ## 全体の拡張設計（未実装）
 
-1. **EFFECT ENGINE**: 各ContentPluginの描画後、デッキ合成前にエフェクトチェーンを適用。EffectConfigには強度、速度、方向、同期周期、位相を保持。
+1. **EFFECT ENGINE**: Phase 2でタイル変換と画像後処理を実装（下記参照）。追加の効果は同じ段階へ拡張可能。
 2. **FACE FX ENGINE**: Databaseに顔領域・ランドマーク・解析バージョンを追加。写真テクスチャ提供層で加工し、各コンテンツが共用。自然な表情生成と簡易ランドマーク変形を区別する。
 3. **GESTURE ENGINE**: MediaPipeの低頻度認識を描画から分離。平滑化・保持時間・終了猶予・優先順位・クールダウン後にtimestamp付きActionを発行。映像は送信しない。
 4. **PHYSICS ENGINE**: コントローラーのみ固定刻みで更新。共通オブジェクトIDに紙片・球体・粒子の状態と速度を保持。THROW/BOUNCE/WIND/TOUCHの切替でも同じIDを継続。2.5D接触を先行。
@@ -35,3 +35,21 @@ Transportは `performance.now()` から連続拍位置を計算します。BPM�
 ## 公開
 
 Vite baseは `/photomosaic-vj/`。index/controller/screenをマルチページビルドし、GitHub Actionsで単体テスト・型検査・ビルド後にPagesへ配置します。ブラウザのメディア・IndexedDBにはHTTPSまたはlocalhostを使用します。
+
+## Phase 2: Effect Chain
+
+`CONTENT → TILE EFFECTS → FRAME EFFECTS → DECK BUFFER → MIXER → OUTPUT` の順で処理します。
+
+- `src/effects.ts`: `EffectConfig` / `Effects`、デッキ固有の `EffectChain`。PULSE / WAVE / FLOAT はタイルの基準位置を変更せず描画変換を返します。WIND / GUST / EXPLOSION は Float64Array にタイルごとの位置オフセット・速度・回転・角速度を保持します。物理積分は1/120秒刻み、1描画の追従は最大250msに制限します。
+- `src/frame-effects.ts`: GLITCH と RGB SHIFT を完成したデッキ画像へ適用。再利用する2枚の補助Canvasでスライス移動・チャンネル合成を行い、毎フレームの画素読み戻しを避けます。
+- `src/effects-ui.ts`: 共通設定に基づく折りたたみUI、パラメータ入力とアクションの接続。
+- `RenderFrame.tileTransform`: Content と Effects の境界。Mosaic は個別エフェクト名を知りません。将来の Content は同じ変換プロバイダを利用できます。
+- `Renderer`: デッキごとに独立した EffectChain / FrameEffects を所有。静止時は従来の描画キャッシュを維持します。アニメーション終了時も最後の静止フレームを必ず再描画します。動くタイルには色補正済みのモザイク画像をアトラスとして再利用し、写真選択と色補正を毎フレーム繰り返しません。A/B は引き続きデコード済みサムネイルを共有します。
+
+ASSEMBLED / FLOATING / WIND / EXPLODING / ASSEMBLING を表示状態として返します。新たな操作は現在位置・速度から引き継ぎます。DIRECT は初速を引き継ぐ補間、SPRING は減衰振動、SWIRL は補間経路を回転させて戻ります。戻り中の解像度・列数変更時には位置と戻り開始状態を新しい格子へ対応付けます。
+
+同期エフェクトは既存 `Transport.beat()` の値を使用します。独立したBPM時計は持ちません。拍指定 ASSEMBLE の進捗は経過拍数から計算し、BPM変更と一時停止に追従します。位相リセット時は経過拍の基準を置き直し、戻りの進捗が逆転しないようにします。FREE は実時間の秒数です。
+
+出力側は EffectChain を実行しません。ミキサーの最終Canvasを既存のJPEG / BroadcastChannel経路で送るため、すべての新しい効果を含む同じ完成画面を受信します。最大30fps、圧縮誤差、転送遅延、バックグラウンド制限は従来どおり残ります。
+
+将来の FACE / HAND / PHYSICS / AUDIO REACTIVE は、ContentPlugin・タイル変換・フレーム処理のいずれかの段階へ追加できます。今回それらの機能を実装したわけではありません。

@@ -1,3 +1,4 @@
+import { effectsPanel, bindEffects, type EffectAction } from "./effects-ui";
 import "./style.css";
 import { Transport } from "./transport";
 import { allPhotos, savePhoto, clearPhotos } from "./database";
@@ -5,8 +6,8 @@ import { Renderer } from "./renderer";
 import { defaultDeck, type Photo, type Mixer } from "./types";
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const deckPanel = (id: string) =>
-  `<section class="panel deck" data-deck="${id}"><div class="section-title"><span class="deck-badge">${id}</span><h2>PHOTO MOSAIC</h2><span class="tag">CONTENT 01</span></div><label>ターゲット<select data-key="target"><option value="text">TEXT / 文字</option><option value="image">IMAGE / 画像</option></select></label><textarea data-key="text" rows="2">${id === "A" ? "PHOTO\nVJ" : "MAKE\nMEMORIES"}</textarea><label class="file-button">ターゲット画像<input type="file" accept="image/*" data-image></label><details><summary>文字・カラー</summary><label>フォント<select data-key="font"><option value="sans-serif">Sans serif</option><option value="serif">Serif</option><option value="monospace">Monospace</option></select></label><label>文字サイズ<input data-key="fontSize" type="range" min="40" max="400" value="210"></label><label>太字<input data-key="bold" type="checkbox" checked></label><label>配置<select data-key="align"><option>center</option><option>left</option><option>right</option></select></label><label>行間<input data-key="lineHeight" type="range" min=".7" max="2" step=".05" value="1.1"></label><label>文字色<input type="color" data-key="color" value="#f5eee0"></label><label>背景<input type="color" data-key="background" value="#11131a"></label></details><label>カラーマッチ<select data-key="mode"><option value="balanced">BALANCED</option><option value="original">ORIGINAL</option><option value="precise">PRECISE</option></select></label><label>色補正<input data-key="correction" type="range" min="0" max="1" step=".01" value=".48"></label><label>タイル列数 <output data-columns>48</output><input data-key="columns" type="range" min="12" max="100" value="48"></label><details><summary>タイル・動き</summary><label>間隔<input data-key="gap" type="range" min="0" max="8" value="1"></label><label>ランダム性<input data-key="randomness" type="range" min="0" max="1" step=".01" value=".08"></label><label>写真の重複<input data-key="repeat" type="checkbox" checked></label><label>ズーム<input data-key="zoom" type="range" min=".5" max="3" step=".01" value="1"></label><label>回転<input data-key="rotation" type="range" min="-180" max="180" value="0"></label><label>飛散<input data-key="scatter" type="range" min="0" max="2" step=".01" value="0"></label><button data-assemble>再集合</button></details><p class="muted">AI PROMPT：未接続 · Phase 1 / TEXT + IMAGE</p></section>`;
-app.innerHTML = `<header><a class="brand" href="./controller.html">PHOTO<span>VJ</span> STUDIO<small>YOUR MEMORIES. LIVE IN MOTION.</small></a><div class="header-actions"><span class="status">● LOCAL / MANUAL</span><button id="open-output">↗ OUTPUT WINDOW</button><button id="fullscreen">⛶ FULLSCREEN</button></div></header><main><div class="stage-layout"><section class="stage"><div class="stage-heading"><span><i></i> PROGRAM OUTPUT</span><span id="resolution">1280 × 720</span></div><canvas id="preview" width="1280" height="720"></canvas><div class="stage-footer"><span id="visual-status">TEXT PREVIEW · 写真を読み込んでスタート</span><span id="fps">— FPS</span></div></section><section class="panel transport"><div class="section-title"><h2>AUDIO SYNC</h2><span class="tag">MANUAL</span></div><div class="bpm-line"><input id="bpm" aria-label="BPM" type="number" min="30" max="240" step=".1" value="120"><span>BPM</span></div><div class="beat-dots">${[1, 2, 3, 4].map((n) => `<b>${n}</b>`).join("")}</div><progress id="phase" max="1" value="0"></progress><div class="readouts"><span id="bar">BAR 1</span><span id="offset">+0 ms</span></div><button class="primary tap" id="tap">TAP <kbd>SPACE</kbd></button><div class="button-row"><button id="phase-reset">PHASE RESET ↵</button><button id="bar-reset">BAR RESET ⇧↵</button></div><div class="button-row"><button id="lock">LOCK OFF</button><button id="run">PAUSE</button><button id="tap-reset">TAP RESET</button></div><details><summary>BPM微調整・位相NUDGE</summary><div class="button-row">${[-5, -1, -0.1, 0.1, 1, 5].map((n) => `<button data-bpm="${n}">${n > 0 ? "+" : ""}${n}</button>`).join("")}<button data-factor="2">×2</button><button data-factor=".5">÷2</button></div><p>位相を前進 (+) / 後退 (−)</p><div class="button-row">${[-50, -25, -10, -5, 5, 10, 25, 50].map((n) => `<button data-nudge="${n}">${n > 0 ? "+" : ""}${n}ms</button>`).join("")}<button id="offset-reset">OFFSET RESET</button></div></details><p class="muted">AUDIO INPUT: OFF · 音声なしで同期できます</p></section></div><div class="workspace">${deckPanel("A")}<section class="panel mixer"><div class="section-title"><h2>DUAL-DECK MIXER</h2><span class="tag">LIVE</span></div><div class="mode-grid">${["split", "overlay", "crossfade", "a", "b"].map((m, i) => `<button data-mode="${m}" class="${i === 0 ? "selected" : ""}">${m === "a" ? "A ONLY" : m === "b" ? "B ONLY" : m.toUpperCase()}</button>`).join("")}</div><div class="fader-label"><span>DECK A</span><span>DECK B</span></div><input id="mix" aria-label="Split or crossfade" type="range" min="0" max="1" step=".001" value=".5"><div id="mix-readout" class="center muted">50 / 50</div><label>OVERLAY 不透明度<input id="opacity" type="range" min="0" max="1" step=".01" value=".5"></label><label>SPLIT方向<select id="axis"><option value="horizontal">左右</option><option value="vertical">上下</option></select></label><label>ブレンド<select id="blend"><option value="source-over">NORMAL</option><option value="lighter">ADD</option><option value="screen">SCREEN</option><option value="multiply">MULTIPLY</option><option value="difference">DIFFERENCE</option></select></label><div class="button-row"><button id="swap">⇄ SWAP</button><button id="freeze">❚❚ FREEZE</button></div><details><summary>出力品質</summary><label>解像度<select id="quality"><option value="960">960 × 540</option><option selected value="1280">1280 × 720</option><option value="1920">1920 × 1080</option></select></label></details><p class="muted">← → 分割位置 · ↑ ↓ 透明度<br>プレビューをドラッグして境界を操作</p></section>${deckPanel("B")}</div><section class="panel library"><div class="section-title"><h2>PHOTO DATABASE</h2><span id="photo-count" class="tag">0 PHOTOS</span><div class="library-actions"><label class="file-button">＋ 写真を追加<input id="files" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><label class="file-button">フォルダ<input id="folder" type="file" webkitdirectory multiple></label><button id="metadata">JSON解析データ</button><button id="clear">全削除</button></div></div><div class="import-status"><progress id="import-progress" value="0" max="1"></progress><span id="import-status">ブラウザ内で処理・保存。写真を外部に送信しません。</span><button id="cancel" hidden>キャンセル</button></div><div id="photos" class="photos"></div><button id="more" hidden>さらに表示</button><p class="muted">写真をクリックして除外／再追加 · キャッシュはこのブラウザに保存 · 顔解析はPhase 5で追加</p></section><footer>PHOTO VJ STUDIO <span>PHASE 01 / BASIC VJ</span><span>Space TAP · Enter PHASE · Shift+Enter BAR</span></footer><div id="notice" role="status"></div></main>`;
+  `<section class="panel deck" data-deck="${id}"><div class="section-title"><span class="deck-badge">${id}</span><h2>PHOTO MOSAIC</h2><span class="tag">CONTENT 01</span></div><label>ターゲット<select data-key="target"><option value="text">TEXT / 文字</option><option value="image">IMAGE / 画像</option></select></label><textarea data-key="text" rows="2">${id === "A" ? "PHOTO\nVJ" : "MAKE\nMEMORIES"}</textarea><label class="file-button">ターゲット画像<input type="file" accept="image/*" data-image></label><details><summary>文字・カラー</summary><label>フォント<select data-key="font"><option value="sans-serif">Sans serif</option><option value="serif">Serif</option><option value="monospace">Monospace</option></select></label><label>文字サイズ<input data-key="fontSize" type="range" min="40" max="400" value="210"></label><label>太字<input data-key="bold" type="checkbox" checked></label><label>配置<select data-key="align"><option>center</option><option>left</option><option>right</option></select></label><label>行間<input data-key="lineHeight" type="range" min=".7" max="2" step=".05" value="1.1"></label><label>文字色<input type="color" data-key="color" value="#f5eee0"></label><label>背景<input type="color" data-key="background" value="#11131a"></label></details><label>カラーマッチ<select data-key="mode"><option value="balanced">BALANCED</option><option value="original">ORIGINAL</option><option value="precise">PRECISE</option></select></label><label>色補正<input data-key="correction" type="range" min="0" max="1" step=".01" value=".48"></label><label>タイル列数 <output data-columns>48</output><input data-key="columns" type="range" min="12" max="100" value="48"></label><details><summary>タイル・動き</summary><label>間隔<input data-key="gap" type="range" min="0" max="8" value="1"></label><label>ランダム性<input data-key="randomness" type="range" min="0" max="1" step=".01" value=".08"></label><label>写真の重複<input data-key="repeat" type="checkbox" checked></label><label>ズーム<input data-key="zoom" type="range" min=".5" max="3" step=".01" value="1"></label><label>回転<input data-key="rotation" type="range" min="-180" max="180" value="0"></label><label>飛散<input data-key="scatter" type="range" min="0" max="2" step=".01" value="0"></label><button data-assemble>再集合</button></details>${effectsPanel()}<p class="muted">AI PROMPT：未接続 · TEXT + IMAGE</p></section>`;
+app.innerHTML = `<header><a class="brand" href="./controller.html">PHOTO<span>VJ</span> STUDIO<small>YOUR MEMORIES. LIVE IN MOTION.</small></a><div class="header-actions"><span class="status">● LOCAL / MANUAL</span><button id="open-output">↗ OUTPUT WINDOW</button><button id="fullscreen">⛶ FULLSCREEN</button></div></header><main><div class="stage-layout"><section class="stage"><div class="stage-heading"><span><i></i> PROGRAM OUTPUT</span><span id="resolution">1280 × 720</span></div><canvas id="preview" width="1280" height="720"></canvas><div class="stage-footer"><span id="visual-status">TEXT PREVIEW · 写真を読み込んでスタート</span><span id="fps">— FPS</span></div></section><section class="panel transport"><div class="section-title"><h2>AUDIO SYNC</h2><span class="tag">MANUAL</span></div><div class="bpm-line"><input id="bpm" aria-label="BPM" type="number" min="30" max="240" step=".1" value="120"><span>BPM</span></div><div class="beat-dots">${[1, 2, 3, 4].map((n) => `<b>${n}</b>`).join("")}</div><progress id="phase" max="1" value="0"></progress><div class="readouts"><span id="bar">BAR 1</span><span id="offset">+0 ms</span></div><button class="primary tap" id="tap">TAP <kbd>SPACE</kbd></button><div class="button-row"><button id="phase-reset">PHASE RESET ↵</button><button id="bar-reset">BAR RESET ⇧↵</button></div><div class="button-row"><button id="lock">LOCK OFF</button><button id="run">PAUSE</button><button id="tap-reset">TAP RESET</button></div><details><summary>BPM微調整・位相NUDGE</summary><div class="button-row">${[-5, -1, -0.1, 0.1, 1, 5].map((n) => `<button data-bpm="${n}">${n > 0 ? "+" : ""}${n}</button>`).join("")}<button data-factor="2">×2</button><button data-factor=".5">÷2</button></div><p>位相を前進 (+) / 後退 (−)</p><div class="button-row">${[-50, -25, -10, -5, 5, 10, 25, 50].map((n) => `<button data-nudge="${n}">${n > 0 ? "+" : ""}${n}ms</button>`).join("")}<button id="offset-reset">OFFSET RESET</button></div></details><p class="muted">AUDIO INPUT: OFF · 音声なしで同期できます</p></section></div><div class="workspace">${deckPanel("A")}<section class="panel mixer"><div class="section-title"><h2>DUAL-DECK MIXER</h2><span class="tag">LIVE</span></div><div class="mode-grid">${["split", "overlay", "crossfade", "a", "b"].map((m, i) => `<button data-mode="${m}" class="${i === 0 ? "selected" : ""}">${m === "a" ? "A ONLY" : m === "b" ? "B ONLY" : m.toUpperCase()}</button>`).join("")}</div><div class="fader-label"><span>DECK A</span><span>DECK B</span></div><input id="mix" aria-label="Split or crossfade" type="range" min="0" max="1" step=".001" value=".5"><div id="mix-readout" class="center muted">50 / 50</div><label>OVERLAY 不透明度<input id="opacity" type="range" min="0" max="1" step=".01" value=".5"></label><label>SPLIT方向<select id="axis"><option value="horizontal">左右</option><option value="vertical">上下</option></select></label><label>ブレンド<select id="blend"><option value="source-over">NORMAL</option><option value="lighter">ADD</option><option value="screen">SCREEN</option><option value="multiply">MULTIPLY</option><option value="difference">DIFFERENCE</option></select></label><div class="button-row"><button id="swap">⇄ SWAP</button><button id="freeze">❚❚ FREEZE</button></div><details><summary>出力品質</summary><label>解像度<select id="quality"><option value="960">960 × 540</option><option selected value="1280">1280 × 720</option><option value="1920">1920 × 1080</option></select></label></details><label>FX SHORTCUT DECK<select id="fx-target" aria-label="FX shortcut deck"><option value="0">DECK A</option><option value="1">DECK B</option></select></label><p class="muted">E EXPLOSION · R ASSEMBLE · G GUST</p><p class="muted">← → 分割位置 · ↑ ↓ 透明度<br>プレビューをドラッグして境界を操作</p></section>${deckPanel("B")}</div><section class="panel library"><div class="section-title"><h2>PHOTO DATABASE</h2><span id="photo-count" class="tag">0 PHOTOS</span><div class="library-actions"><label class="file-button">＋ 写真を追加<input id="files" type="file" accept="image/jpeg,image/png,image/webp" multiple></label><label class="file-button">フォルダ<input id="folder" type="file" webkitdirectory multiple></label><button id="metadata">JSON解析データ</button><button id="clear">全削除</button></div></div><div class="import-status"><progress id="import-progress" value="0" max="1"></progress><span id="import-status">ブラウザ内で処理・保存。写真を外部に送信しません。</span><button id="cancel" hidden>キャンセル</button></div><div id="photos" class="photos"></div><button id="more" hidden>さらに表示</button><p class="muted">写真をクリックして除外／再追加 · キャッシュはこのブラウザに保存 · 顔解析はPhase 5で追加</p></section><footer>PHOTO VJ STUDIO <span>PHASE 02 / DYNAMIC PHOTO FX</span><span>Space TAP · Enter PHASE · Shift+Enter BAR</span></footer><div id="notice" role="status"></div></main>`;
 const $ = <T extends HTMLElement = HTMLElement>(s: string) =>
   document.querySelector<T>(s)!;
 const clock = new Transport(),
@@ -44,8 +45,12 @@ function updateClock() {
     `${clock.state.phaseOffset >= 0 ? "+" : ""}${clock.state.phaseOffset} ms`;
 }
 $("#tap").onclick = () => clock.tap();
-$("#phase-reset").onclick = () => clock.reset();
-$("#bar-reset").onclick = () => clock.reset(true);
+function resetClock(bar = false) {
+  clock.reset(bar);
+  renderer.effects.forEach((effect) => effect.rebase(clock.beat()));
+}
+$("#phase-reset").onclick = () => resetClock();
+$("#bar-reset").onclick = () => resetClock(true);
 $("#tap-reset").onclick = () => {
   clock.taps = [];
   notice("TAP系列をリセットしました");
@@ -80,7 +85,42 @@ document
 $("#offset-reset").onclick = () => {
   clock.state.phaseOffset = 0;
 };
+function effectAction(
+  i: number,
+  action: EffectAction,
+  origin = { x: 0.5, y: 0.5 },
+) {
+  const d = decks[i],
+    effect = renderer.effects[i];
+  effect.configure(canvas.width, canvas.height, d.columns);
+  // Actions also work while FREEZE is holding the visible output.
+  effect.config = d.effects;
+  if (action === "gust") effect.gust();
+  if (action === "explosion") {
+    if (d.effects.explosion.origin === "random")
+      origin = { x: Math.random(), y: Math.random() };
+    effect.explode(
+      origin,
+      d.effects.explosion.power,
+      d.effects.explosion.rotation,
+    );
+  }
+  if (action === "assemble") {
+    effect.assemble(d.scatter, clock.beatDuration / 1000);
+    d.scatter = 0;
+    d.effects.wind.enabled = false;
+    const panel = document.querySelectorAll<HTMLElement>("[data-deck]")[i];
+    panel.querySelector<HTMLInputElement>('[data-key="scatter"]')!.value = "0";
+    panel.querySelector<HTMLInputElement>(
+      '[data-fx="wind"][data-param="enabled"]',
+    )!.checked = false;
+  }
+}
 document.querySelectorAll<HTMLElement>("[data-deck]").forEach((panel, i) => {
+  bindEffects(panel, decks[i].effects, (action) => effectAction(i, action));
+  panel.addEventListener("pointerdown", () => {
+    $<HTMLSelectElement>("#fx-target").value = String(i);
+  });
   panel
     .querySelectorAll<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
@@ -122,8 +162,7 @@ document.querySelectorAll<HTMLElement>("[data-deck]").forEach((panel, i) => {
     }
   };
   panel.querySelector<HTMLButtonElement>("[data-assemble]")!.onclick = () => {
-    decks[i].scatter = 0;
-    panel.querySelector<HTMLInputElement>('[data-key="scatter"]')!.value = "0";
+    effectAction(i, "assemble");
   };
 });
 function syncMixer() {
@@ -160,6 +199,20 @@ $("#freeze").onclick = () => {
   $("#freeze").classList.toggle("selected", mix.freeze);
 };
 canvas.onpointerdown = (e) => {
+  const i = Number($<HTMLSelectElement>("#fx-target").value);
+  if (decks[i].effects.explosion.origin === "pointer") {
+    const r = canvas.getBoundingClientRect();
+    // Undo the deck view transform so the blast starts under the pointer.
+    const d = decks[i],
+      angle = (-d.rotation * Math.PI) / 180;
+    const x = (((e.clientX - r.left) / r.width - 0.5) * canvas.width) / d.zoom;
+    const y = (((e.clientY - r.top) / r.height - 0.5) * canvas.height) / d.zoom;
+    effectAction(i, "explosion", {
+      x: (x * Math.cos(angle) - y * Math.sin(angle)) / canvas.width + 0.5,
+      y: (x * Math.sin(angle) + y * Math.cos(angle)) / canvas.height + 0.5,
+    });
+    return;
+  }
   canvas.setPointerCapture(e.pointerId);
   move(e);
 };
@@ -217,7 +270,16 @@ window.addEventListener("keydown", (e) => {
   )
     e.preventDefault();
   if (e.code === "Space") clock.tap();
-  if (e.code === "Enter") clock.reset(e.shiftKey);
+  if (e.code === "Enter") resetClock(e.shiftKey);
+  if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+    const action = (
+      { KeyE: "explosion", KeyR: "assemble", KeyG: "gust" } as const
+    )[e.code as "KeyE" | "KeyR" | "KeyG"];
+    if (action) {
+      e.preventDefault();
+      effectAction(Number($<HTMLSelectElement>("#fx-target").value), action);
+    }
+  }
   if (e.code === "ArrowLeft") mix.amount = Math.max(0, mix.amount - 0.01);
   if (e.code === "ArrowRight") mix.amount = Math.min(1, mix.amount + 0.01);
   if (e.code === "ArrowUp") mix.opacity = Math.min(1, mix.opacity + 0.01);
@@ -359,9 +421,16 @@ channel.onmessage = () => {
 let previous = performance.now(),
   fpsStart = previous,
   frames = 0;
+const effectStates = Array.from(
+  document.querySelectorAll<HTMLElement>("[data-fx-state]"),
+);
 function frame(now: number) {
   renderer.render(decks, mix, clock.beat(now), now);
   updateClock();
+  effectStates.forEach((el, i) => {
+    const state = renderer.effects[i].state;
+    if (el.textContent !== state) el.textContent = state;
+  });
   frames++;
   if (now - fpsStart > 1000) {
     $("#fps").textContent =

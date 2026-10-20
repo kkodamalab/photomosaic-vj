@@ -1,3 +1,8 @@
+import {
+  defaultEffects,
+  type Effects,
+  type TileTransformProvider,
+} from "./effects";
 export type RGB = [number, number, number];
 export interface Photo {
   id: string;
@@ -33,6 +38,7 @@ export type Deck = {
   zoom: number;
   rotation: number;
   scatter: number;
+  effects: Effects;
   image?: HTMLImageElement;
 };
 export type Mixer = {
@@ -63,6 +69,7 @@ export const defaultDeck = (text: string): Deck => ({
   zoom: 1,
   rotation: 0,
   scatter: 0,
+  effects: defaultEffects(),
 });
 export interface ContentPlugin {
   id: string;
@@ -75,6 +82,7 @@ export interface RenderFrame {
   beat: number;
   time: number;
   deck: Deck;
+  tileTransform?: TileTransformProvider;
 }
 // Future engines subscribe to timestamped transport snapshots, never to render-frame counts.
 export interface Engine {

@@ -1,0 +1,56 @@
+{
+  "browser": "154.0.8037.57",
+  "base": "http://127.0.0.1:4173/photomosaic-vj/",
+  "results": [
+    "pulse ON/OFF: animated canvas and exact OFF restoration",
+    "wave ON/OFF: animated canvas and exact OFF restoration",
+    "float ON/OFF: animated canvas and exact OFF restoration",
+    "glitch ON/OFF: animated canvas and exact OFF restoration",
+    "rgbShift ON/OFF: animated canvas and exact OFF restoration",
+    "four PHOTO WAVE directions render",
+    "Deck B effects do not alter Deck A",
+    "Deck B independently animates",
+    "FLOAT + WAVE + BPM-synced PULSE composite",
+    "100-photo live effects run without runtime errors",
+    "WIND moves rendered photo tiles",
+    "WIND OFF preserves displaced positions and inertia",
+    "GUST visibly accelerates photo motion",
+    "EXPLOSION → DIRECT ASSEMBLE returns continuously",
+    "EXPLOSION → SPRING ASSEMBLE returns continuously",
+    "EXPLOSION → SWIRL ASSEMBLE returns continuously",
+    "pointer-origin explosion",
+    "typing E/R/G does not trigger effect shortcuts",
+    "E / R / G shortcuts operate selected deck",
+    "BPM SYNC follows Transport PAUSE, tempo change and PHASE RESET",
+    "Deck A demo: FLOAT → WAVE → synced PULSE → GUST → WIND → EXPLOSION → SWIRL / 4 beats",
+    "Deck B demo: FLOAT → WAVE → synced PULSE → GUST → WIND → EXPLOSION → SWIRL / 4 beats",
+    "FREEZE holds complete effect composite",
+    "OUTPUT receives animated effects",
+    "Controller/Output same frozen FX frame (JPEG tolerance)",
+    "1000-photo effect stress run and assembly",
+    "expanded FX UI fits 390px mobile width",
+    "no browser runtime exceptions"
+  ],
+  "errors": [],
+  "performanceResults": [
+    {
+      "name": "100 photos / 1296 tiles / FLOAT + WAVE + synced PULSE",
+      "fps": 45.62435944060638,
+      "p95FrameMs": 33.400000000001455,
+      "frames": 138
+    },
+    {
+      "name": "1000 photos / 1296 tiles / FLOAT + WAVE + PULSE",
+      "fps": 47.62539132751699,
+      "p95FrameMs": 33.39999999999418,
+      "frames": 143
+    },
+    {
+      "name": "1000 photos / 1296 tiles / FLOAT + WAVE + PULSE + GLITCH + RGB SHIFT",
+      "fps": 25.162230168189208,
+      "p95FrameMs": 50.10000000000582,
+      "frames": 76
+    }
+  ],
+  "outputMeanChannelError": 10.63162037037037
+}

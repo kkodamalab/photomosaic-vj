@@ -1,3 +1,5 @@
+import { FrameEffects } from "./frame-effects";
+import { EffectChain } from "./effects";
 import type { ContentPlugin, RenderFrame, Photo, Deck, Mixer } from "./types";
 export class Mosaic implements ContentPlugin {
   id = "photo-mosaic";
@@ -7,6 +9,8 @@ export class Mosaic implements ContentPlugin {
   key = "";
   tiles: { x: number; y: number; rgb: number[]; photo: number }[] = [];
   target = document.createElement("canvas");
+  private atlas = document.createElement("canvas");
+  private atlasKey = "";
   async load(photos: Photo[]) {
     const active = photos.filter((p) => !p.excluded);
     const next = await Promise.all(
@@ -19,7 +23,7 @@ export class Mosaic implements ContentPlugin {
   }
   render(
     ctx: CanvasRenderingContext2D,
-    { width: w, height: h, deck: d, beat }: RenderFrame,
+    { width: w, height: h, deck: d, beat, tileTransform }: RenderFrame,
   ) {
     const rows = Math.round((d.columns * h) / w),
       tw = w / d.columns,
@@ -108,6 +112,21 @@ export class Mosaic implements ContentPlugin {
           this.tiles.push({ x, y, rgb, photo: best });
         }
     }
+    if (tileTransform) {
+      const atlasKey = JSON.stringify([this.key, d.gap, d.correction]);
+      if (this.atlasKey !== atlasKey) {
+        this.atlas.width = w;
+        this.atlas.height = h;
+        this.render(this.atlas.getContext("2d")!, {
+          width: w,
+          height: h,
+          deck: { ...d, zoom: 1, rotation: 0, scatter: 0 },
+          beat,
+          time: 0,
+        });
+        this.atlasKey = atlasKey;
+      }
+    }
     ctx.fillStyle = d.background;
     ctx.fillRect(0, 0, w, h);
     ctx.save();
@@ -115,13 +134,40 @@ export class Mosaic implements ContentPlugin {
     ctx.scale(d.zoom, d.zoom);
     ctx.rotate((d.rotation * Math.PI) / 180);
     ctx.translate(-w / 2, -h / 2);
-    for (const t of this.tiles) {
+    const global = tileTransform ? ctx.getTransform() : undefined;
+    for (let id = 0; id < this.tiles.length; id++) {
+      const t = this.tiles[id];
       const dx = (t.x - d.columns / 2) * d.scatter * tw * 0.8,
         dy = (t.y - rows / 2) * d.scatter * th * 0.8;
       const x = t.x * tw + dx + Math.sin(beat * 0.7 + t.y) * d.scatter * 12,
         y = t.y * th + dy;
       const ww = Math.max(1, tw - d.gap),
         hh = Math.max(1, th - d.gap);
+      if (tileTransform && global) {
+        const transform = tileTransform(id, x + ww / 2, y + hh / 2);
+        const cosine = Math.cos(transform.rotation) * transform.scale;
+        const sine = Math.sin(transform.rotation) * transform.scale;
+        ctx.setTransform(
+          global.a * cosine + global.c * sine,
+          global.b * cosine + global.d * sine,
+          global.c * cosine - global.a * sine,
+          global.d * cosine - global.b * sine,
+          global.a * transform.x + global.c * transform.y + global.e,
+          global.b * transform.x + global.d * transform.y + global.f,
+        );
+        ctx.drawImage(
+          this.atlas,
+          t.x * tw,
+          t.y * th,
+          ww,
+          hh,
+          -ww / 2,
+          -hh / 2,
+          ww,
+          hh,
+        );
+        continue;
+      }
       const img = this.images[t.photo];
       if (img) {
         const ratio = Math.max(ww / img.width, hh / img.height);
@@ -144,7 +190,7 @@ export class Mosaic implements ContentPlugin {
           : `rgb(${t.rgb.join(",")})`;
         ctx.fillRect(x, y, ww, hh);
       }
-      if (d.mode !== "original" && img) {
+      if (!tileTransform && d.mode !== "original" && img) {
         ctx.globalAlpha = d.correction * (d.mode === "precise" ? 1 : 0.65);
         ctx.fillStyle = `rgb(${t.rgb.join(",")})`;
         ctx.fillRect(x, y, ww, hh);
@@ -159,7 +205,10 @@ export class Mosaic implements ContentPlugin {
 }
 export class Renderer {
   decks = [new Mosaic(), new Mosaic()];
+  effects = [new EffectChain(), new EffectChain()];
+  frameEffects = [new FrameEffects(), new FrameEffects()];
   dirtyKeys = ["", ""];
+  private wasAnimating = [false, false];
   buffers = [
     document.createElement("canvas"),
     document.createElement("canvas"),
@@ -187,13 +236,19 @@ export class Renderer {
     this.ctx = canvas.getContext("2d")!;
   }
   render(settings: Deck[], mix: Mixer, beat: number, time: number) {
-    if (mix.freeze) return;
+    if (mix.freeze) {
+      this.effects.forEach((e) => e.pause(time, beat));
+      return;
+    }
     const { width: w, height: h } = this.canvas;
     this.buffers.forEach((b, i) => {
       if (b.width !== w || b.height !== h) {
         b.width = w;
         b.height = h;
       }
+      const effects = this.effects[i];
+      effects.configure(w, h, settings[i].columns);
+      effects.begin(settings[i].effects, time, beat);
       const key = JSON.stringify([
         w,
         h,
@@ -201,15 +256,23 @@ export class Renderer {
         settings[i],
         settings[i].image?.src,
       ]);
-      if (settings[i].scatter > 0 || this.dirtyKeys[i] !== key) {
+      if (
+        effects.active ||
+        this.wasAnimating[i] ||
+        settings[i].scatter > 0 ||
+        this.dirtyKeys[i] !== key
+      ) {
         this.decks[i].render(b.getContext("2d")!, {
           width: w,
           height: h,
           deck: settings[i],
           beat,
           time,
+          tileTransform: effects.tileActive ? effects.transform : undefined,
         });
+        this.frameEffects[i].apply(b, settings[i].effects, time, beat);
         this.dirtyKeys[i] = key;
+        this.wasAnimating[i] = effects.active;
       }
     });
     const [a, b] = mix.swap ? [this.buffers[1], this.buffers[0]] : this.buffers;
