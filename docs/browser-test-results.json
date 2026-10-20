@@ -1,0 +1,21 @@
+{
+  "browser": "Microsoft Edge headless",
+  "base": "http://127.0.0.1:5174/photomosaic-vj/",
+  "results": [
+    "phase reset preserves BPM",
+    "typing does not trigger TAP",
+    "1000 JPEG images imported, analyzed, cached and rendered",
+    "photo exclusion and re-inclusion",
+    "independent TEXT and IMAGE targets",
+    "A ONLY and B ONLY render distinct decks",
+    "split changes pixels",
+    "overlay changes pixels",
+    "crossfade changes pixels",
+    "freeze retains output pixels",
+    "separate screen receives controller frame",
+    "IndexedDB survives reload",
+    "mobile layout has no horizontal overflow",
+    "no browser runtime errors"
+  ],
+  "errors": []
+}
