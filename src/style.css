@@ -592,3 +592,14 @@ canvas:fullscreen {
   min-width: 28px;
   text-align: right;
 }
+
+.physics-buttons .physics-action,
+.physics-panel .physics-action {
+  min-height: 44px;
+  touch-action: manipulation;
+  font-size: 10px;
+}
+.physics-panel .physics-action {
+  width: 100%;
+  margin: 6px 0 10px;
+}

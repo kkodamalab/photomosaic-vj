@@ -58,9 +58,11 @@ function syncPhysicsPanel(i: number) {
     });
   panel.querySelector<HTMLSelectElement>("[data-physics-return]")!.value =
     decks[i].effects.assemble.mode;
-  const button = panel.querySelector('[data-physics-action="bounce"]')!;
-  button.textContent = `BOUNCE ${config.ball.bounce ? "ON" : "OFF"} · B`;
-  button.classList.toggle("selected", config.ball.bounce);
+  panel.querySelectorAll('[data-physics-action="bounce"]').forEach((button) => {
+    button.textContent = `BOUNCE ${config.ball.bounce ? "ON" : "OFF"} · B`;
+    button.classList.toggle("selected", config.ball.bounce);
+    button.setAttribute("aria-pressed", String(config.ball.bounce));
+  });
   panel.querySelector("[data-physics-state]")!.textContent = p.state;
   panel.querySelector("[data-physics-status]")!.textContent = physicsQueues[i]
     .pending.length

@@ -102,3 +102,21 @@ photoVJ.snapshot(0); // シートの位置・速度・回転等も含める
 Output は Physics を実行せず、Controller の確定済みミキサーフレームを JPEG / BroadcastChannel で受信します。最大30fps、圧縮誤差、転送遅延、Controller のバックグラウンド制限は従来どおりです。
 
 MediaPipe Hands / Face、ジェスチャー認識、音声解析、自動BPM上書き、CUE、タイムライン、AI生成、録画、歌詞表示、楽曲データは追加していません。実写真と実プロジェクターを使う長時間ライブは別途手動確認が必要です。
+
+## Controller action buttons
+
+Each deck exposes GATHER · H, CRUMPLE · C, THROW · T, BOUNCE ON/OFF · B,
+RELEASE · U and ASSEMBLE · R both in the always-expanded PHYSICS PERFORMANCE
+3-column / 2-row grid and next to their PHYSICS settings. All action buttons
+have a minimum 44px height. BOUNCE buttons expose `aria-pressed` and stay in
+sync with the existing checkbox and keyboard shortcut.
+
+These controls share the existing `bindPhysics → physicsAction → executePhysics`
+path with shortcuts, retaining current configuration and Transport scheduling.
+No physics implementation or public API changes are introduced.
+
+`tests/physics-ui-browser.mjs` runs the complete mouse-only explosion / gather /
+crumple / throw / bounce / release / swirl assembly demo from both button groups,
+checks that it returns to the identical mosaic with zero keydown events, then
+checks H/C/T/B/U/R and mobile touch controls. The Pages workflow also runs this
+test against the published deployment and uploads its report and screenshots.

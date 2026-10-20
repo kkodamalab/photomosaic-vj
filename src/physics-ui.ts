@@ -80,6 +80,17 @@ const choices: Record<string, (string | number)[]> = {
   depthMode: ["random", "time"],
   target: ["center", "pointer"],
 };
+const actionLabels: Record<string, string> = {
+  gather: "GATHER · H",
+  crumple: "CRUMPLE · C",
+  throw: "THROW · T",
+  bounce: "BOUNCE ON · B",
+  release: "RELEASE · U",
+  assemble: "ASSEMBLE · R",
+};
+function actionButton(action: string) {
+  return `<button class="physics-action" data-physics-action="${action}"${action === "bounce" ? ' aria-pressed="true"' : ""}>${actionLabels[action]}</button>`;
+}
 function controls(values: object, prefix = ""): string {
   return Object.entries(values)
     .map(([key, value]) => {
@@ -87,7 +98,7 @@ function controls(values: object, prefix = ""): string {
         label = labels[key] || key,
         attr = `data-physics="${path}" aria-label="${prefix}${label}"`;
       if (typeof value === "object")
-        return `<details><summary>${key === "memory" ? "MEMORY FIELD" : key === "wind" ? "WIND MEMORY / PHOTO SHEET" : key.toUpperCase()}</summary>${controls(value, path + ".")}</details>`;
+        return `<details><summary>${key === "memory" ? "MEMORY FIELD" : key === "wind" ? "WIND MEMORY / PHOTO SHEET" : key.toUpperCase()}</summary>${controls(value, path + ".")}${key === "gather" || key === "crumple" ? actionButton(key) : ""}</details>`;
       let control = "";
       if (typeof value === "boolean")
         control = `<input type="checkbox" ${attr} ${value ? "checked" : ""}>`;
@@ -99,29 +110,15 @@ function controls(values: object, prefix = ""): string {
           : ranges[key]) || [0, 10, 0.1];
         control = `<input type="range" ${attr} min="${min}" max="${max}" step="${step}" value="${value}"><output data-physics-value="${path}">${value}</output>`;
       }
-      return `<label>${label}${control}</label>`;
+      return `<label>${label}${control}</label>${path === "ball.bounce" ? actionButton("bounce") : path === "ball.spin" ? actionButton("throw") : path === "ball.releaseFraction" ? actionButton("release") : ""}`;
     })
     .join("");
 }
 export function physicsPerformance() {
-  return `<div class="physics-performance"><div class="physics-heading">PHYSICS PERFORMANCE <output data-physics-state>ASSEMBLED</output></div><div class="physics-buttons">${[
-    ["gather", "GATHER · H"],
-    ["crumple", "CRUMPLE · C"],
-    ["throw", "THROW · T"],
-    ["bounce", "BOUNCE ON · B"],
-    ["release", "RELEASE · U"],
-    ["assemble", "ASSEMBLE · R"],
-  ]
-    .map(
-      ([action, label]) =>
-        `<button data-physics-action="${action}">${label}</button>`,
-    )
-    .join(
-      "",
-    )}</div><button class="physics-reset" data-physics-action="reset">RESET PHYSICS</button><small data-physics-status>READY</small></div>`;
+  return `<div class="physics-performance"><div class="physics-heading">PHYSICS PERFORMANCE <output data-physics-state>ASSEMBLED</output></div><div class="physics-buttons">${Object.keys(actionLabels).map(actionButton).join("")}</div><button class="physics-reset" data-physics-action="reset">RESET PHYSICS</button><small data-physics-status>READY</small></div>`;
 }
 export function physicsPanel() {
-  return `<details class="physics-panel"><summary>PHYSICS / 2.5D</summary>${controls(defaultPhysics())}<label>ASSEMBLE MODE<select data-physics-return aria-label="Physics assemble mode"><option value="direct">DIRECT</option><option value="spring">SPRING</option><option value="swirl">SWIRL</option></select></label><p class="muted">GATHER TARGET = POINTER：次のプレビュークリックで集合。球はドラッグして離すと投げられます。WIND MODE = PHYSICS は既存WINDを紙／球にも適用します。</p></details>`;
+  return `<details class="physics-panel"><summary>PHYSICS / 2.5D</summary>${controls(defaultPhysics())}<label>ASSEMBLE MODE<select data-physics-return aria-label="Physics assemble mode"><option value="direct">DIRECT</option><option value="spring">SPRING</option><option value="swirl">SWIRL</option></select></label>${actionButton("assemble")}<p class="muted">GATHER TARGET = POINTER：次のプレビュークリックで集合。球はドラッグして離すと投げられます。WIND MODE = PHYSICS は既存WINDを紙／球にも適用します。</p></details>`;
 }
 export function bindPhysics(
   panel: HTMLElement,

@@ -64,7 +64,11 @@ try {
     else await f.selectOption(String(value));
   };
   const action = async (deck, name) =>
-    page.locator(`[data-deck=${deck}] [data-physics-action=${name}]`).click();
+    page
+      .locator(
+        `[data-deck=${deck}] .physics-performance [data-physics-action=${name}]`,
+      )
+      .click();
   const assembled = async (deck) =>
     page.waitForFunction(
       (i) => window.photoVJ.snapshot(i, false).state === "ASSEMBLED",

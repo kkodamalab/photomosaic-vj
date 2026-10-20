@@ -9,7 +9,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "prettier --check src tests",
-    "test:browser": "node tests/renderer-browser.mjs && node tests/browser.mjs && node tests/phase2-browser.mjs && node tests/phase3-browser.mjs"
+    "test:browser": "node tests/renderer-browser.mjs && node tests/browser.mjs && node tests/phase2-browser.mjs && node tests/phase3-browser.mjs && node tests/physics-ui-browser.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.0",
