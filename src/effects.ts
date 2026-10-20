@@ -61,6 +61,12 @@ export function effectPhase(c: EffectConfig, time: number, beat: number) {
   );
 }
 export interface TileTransform {
+  photo?: number;
+  alpha?: number;
+  bend?: number;
+  curl?: number;
+  sheet?: number;
+  segments?: number;
   x: number;
   y: number;
   rotation: number;
@@ -171,6 +177,13 @@ export class EffectChain {
   }
   rebase(beat: number) {
     this.lastBeat = beat;
+  }
+  resetMotion() {
+    this.motion.fill(0);
+    this.returning = undefined;
+    this.displaced = false;
+    this.gustAge = Infinity;
+    this.accumulator = 0;
   }
   gust() {
     this.returning = undefined;

@@ -53,3 +53,21 @@ ASSEMBLED / FLOATING / WIND / EXPLODING / ASSEMBLING を表示状態として返
 出力側は EffectChain を実行しません。ミキサーの最終Canvasを既存のJPEG / BroadcastChannel経路で送るため、すべての新しい効果を含む同じ完成画面を受信します。最大30fps、圧縮誤差、転送遅延、バックグラウンド制限は従来どおり残ります。
 
 将来の FACE / HAND / PHYSICS / AUDIO REACTIVE は、ContentPlugin・タイル変換・フレーム処理のいずれかの段階へ追加できます。今回それらの機能を実装したわけではありません。
+
+## Phase 3: Photo Physics
+
+`CONTENT → EFFECT TRANSFORMS → PHYSICS PROJECTION → DECK → FRAME FX → MIXER → OUTPUT`。
+
+- `physics-config.ts`: 型、デッキ固有の初期設定、EXIF時刻→depthの純粋API。
+- `photo-physics.ts`: DOMを持たない軽量エンジン。写真のhome / position / velocity / acceleration、rotation / angularVelocity、mass / drag / gravity / restitution / friction、scale / bend / curl / stateをTypedArrayで保持。球は1個の物理状態と共有する球面座標で表す。
+- `physics-actions.ts`: Transport拍座標の小さな操作予約キュー。独立BPM時計を作らず、拍リセットで次の境界へ予約を置き直す。RESETで即破棄。
+- `physics-view.ts`: EffectChainの結果とPhysicsの投影を合成するアダプター。両エンジンは互いをimportしない。紙の軽量分割描画もここに置く。
+- `physics-ui.ts`: 設定パネルと常時アクセスできるライブ操作ボタン。
+- `Renderer`: A/Bに独立エンジンとアダプターを所有。通常モードでは物理更新を実行せず、Phase 1/2のキャッシュを維持。物理開始時に既存飛散・WINDの位置と速度を移して連続性を保つ。
+- `main.ts`: ボタン／キー／ポインタと型付きwindow.photoVJを、同じエンジンのpublic APIへ接続。API詳細はPHASE3.mdを参照。
+
+物理はHIGH=120Hz、MEDIUM=90Hz、LOW=60Hzの固定刻み。1フレームの追従は最大200ms。球と写真の近傍判定はO(n)、写真同士の総当たりは行わない。質量の大きな球には風が弱く作用し、壁面反射では反発・摩擦・squashを更新する。
+
+MEMORY FIELDは元タイルから連続して3軸へ展開し、zに基づく遠近・不透明度・深度順描画を行う。紙は最大3分割、球面片は最大約180枚の表示LODを使い、元のサムネイルを共用する。AUTO品質は物理頻度・表示密度・変形・順序更新だけを調整し、映像解像度を変更しない。
+
+GATHERは現在位置からの吸引、CRUMPLEは現在位置から球面へ補間、RELEASEは球の並進・回転速度を引き継ぐ展開、ASSEMBLEはDIRECT / SPRING / SWIRLでhomeへ戻す。中断・RESET・格子／解像度変更でも状態を引き継ぐか安全に解除する。Output側には新たなシミュレーションを置かない。

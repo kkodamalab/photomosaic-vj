@@ -1,3 +1,4 @@
+import { testUrl } from "./test-url.mjs";
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { writeFile, mkdir } from "node:fs/promises";
@@ -22,7 +23,7 @@ try {
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e)));
   const base = process.env.TEST_URL || "http://127.0.0.1:5173/photomosaic-vj/";
-  await page.goto(base);
+  await page.goto(testUrl("", base));
   await page.waitForSelector("#preview");
   const results = [];
   const pass = (name) => {
@@ -121,7 +122,7 @@ try {
   await page.locator("#mix").fill("0.5");
   await page.locator("#mix").dispatchEvent("input");
   const output = await context.newPage();
-  await output.goto(new URL("screen.html", base).href);
+  await output.goto(testUrl("screen.html", base));
   await output.waitForFunction(
     () => document.querySelector("canvas").width === 1280,
   );
@@ -158,7 +159,13 @@ try {
   await writeFile(
     `${reportDir}/browser-test-results.json`,
     JSON.stringify(
-      { browser: browser.version(), base, results, errors },
+      {
+        browser: browser.version(),
+        deploymentSha: process.env.DEPLOY_SHA || null,
+        base,
+        results,
+        errors,
+      },
       null,
       2,
     ),

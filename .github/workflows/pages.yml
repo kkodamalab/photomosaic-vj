@@ -25,8 +25,8 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npx playwright install --with-deps chromium
-      - name: Browser regression and Dynamic Photo FX tests
-        timeout-minutes: 10
+      - name: Browser regression, FX and Photo Physics tests
+        timeout-minutes: 15
         run: |
           npm run dev -- --strictPort > /tmp/photo-vj-vite.log 2>&1 &
           vj_server_pid=$!
@@ -48,3 +48,19 @@ jobs:
         with:
           path: dist
       - uses: actions/deploy-pages@v4
+      - name: Verify published Controller and Output
+        timeout-minutes: 15
+        env:
+          TEST_URL: https://kkodamalab.github.io/photomosaic-vj/
+          DEPLOY_SHA: ${{ github.sha }}
+        run: |
+          node tests/verify-published.mjs
+          REPORT_DIR=test-results/public-phase1 node tests/browser.mjs
+          REPORT_DIR=test-results/public-phase2 node tests/phase2-browser.mjs
+          REPORT_DIR=test-results/public-phase3 node tests/phase3-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: published-test-results
+          path: test-results/public-*/
+          retention-days: 14

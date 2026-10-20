@@ -1,3 +1,4 @@
+import { defaultPhysics, type PhysicsConfig } from "./physics-config";
 import {
   defaultEffects,
   type Effects,
@@ -39,6 +40,7 @@ export type Deck = {
   rotation: number;
   scatter: number;
   effects: Effects;
+  physics: PhysicsConfig;
   image?: HTMLImageElement;
 };
 export type Mixer = {
@@ -70,6 +72,7 @@ export const defaultDeck = (text: string): Deck => ({
   rotation: 0,
   scatter: 0,
   effects: defaultEffects(),
+  physics: defaultPhysics(),
 });
 export interface ContentPlugin {
   id: string;
@@ -83,6 +86,7 @@ export interface RenderFrame {
   time: number;
   deck: Deck;
   tileTransform?: TileTransformProvider;
+  tileOrder?: Uint32Array;
 }
 // Future engines subscribe to timestamped transport snapshots, never to render-frame counts.
 export interface Engine {

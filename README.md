@@ -1,4 +1,4 @@
-# PHOTO VJ STUDIO — Phase 2: Dynamic Photo FX
+# PHOTO VJ STUDIO — Phase 3: 3D / Photo Physics
 
 ブラウザ内でイベント写真をモザイク化し、2デッキで合成するVJアプリです。
 
@@ -27,9 +27,9 @@ npm run build
 npm run test:browser
 ```
 
-ブラウザ試験は `BROWSER_PATH` 指定、Windows Edge、Linux の `/usr/bin/chromium`、Playwright 管理 Chromium の順で環境に合うものを使用します。Chromium が未導入なら `npx playwright install chromium` を実行してください。`TEST_URL` で対象を変更できます。詳細なソースモジュール検証 `tests/renderer-browser.mjs` は Vite 開発サーバーで実行します。公開版では `node tests/browser.mjs` と `node tests/phase2-browser.mjs` を実行できます。生成レポートは `test-results/` に保存し、既存の docs 内の検証成果物は上書きしません。
+ブラウザ試験は `BROWSER_PATH` 指定、Windows Edge、Linux の `/usr/bin/chromium`、Playwright 管理 Chromium の順で環境に合うものを使用します。Chromium が未導入なら `npx playwright install chromium` を実行してください。`TEST_URL` で対象を変更できます。詳細なソースモジュール検証 `tests/renderer-browser.mjs` は Vite 開発サーバーで実行します。公開版では `node tests/browser.mjs` と `node tests/phase2-browser.mjs`、`node tests/phase3-browser.mjs` を実行できます。生成レポートは `test-results/` に保存し、既存の docs 内の検証成果物は上書きしません。
 
-Phase 2 の操作・パラメータ・デモ: [Dynamic Photo FX](docs/PHASE2.md)。
+Phase 2 の操作: [Dynamic Photo FX](docs/PHASE2.md)。Phase 3 の操作・デモ・public API: [Photo Physics](docs/PHASE3.md)。
 
 ## 演奏
 
@@ -45,7 +45,7 @@ Phase 2 の操作・パラメータ・デモ: [Dynamic Photo FX](docs/PHASE2.md)
 
 ## 範囲と制約
 
-Phase 1 の基本機能に Phase 2 の Dynamic Photo FX を追加しています。写真なしでは文字ターゲットの色タイルを表示し、写真を追加すると実画像のモザイクになります。
+Phase 1 / 2 の基本機能と Dynamic Photo FX に、Phase 3 の軽量2.5D Photo Physicsを追加しています。写真なしでは文字ターゲットの色タイルを表示し、写真を追加すると実画像のモザイクになります。
 
 - 写真の平均RGB、明度、彩度、24-binヒストグラム、JPEG EXIF撮影日時を保存。日時がない場合はnull。時間帯は明度からの粗い推定です。
 - EXIF Orientationはブラウザの `createImageBitmap` に任せます。撮影日時はタイムゾーン不明のローカル日時文字列です。JPEG以外の日時メタデータは未対応。
@@ -55,6 +55,7 @@ Phase 1 の基本機能に Phase 2 の Dynamic Photo FX を追加しています
 - 位相は単調増加時計で計算するためフレーム落ちでも拍位置を維持します。別画面では時計を独立実行せず、同じ合成結果を表示します。
 - PULSE / PHOTO WAVE / FLOAT / WIND・GUST / EXPLOSION / DIRECT・SPRING・SWIRL ASSEMBLE / GLITCH / RGB SHIFT を、デッキ別に併用できます。
 - E = EXPLOSION、R = ASSEMBLE、G = GUST。対象は FX SHORTCUT DECK で選択します。
-- 顔解析・手指操作・Three.jsの3D・音声解析・録画・CUE・プリセットは後続Phaseです。AI PROMPTは未接続と明記しています。
+- MEMORY FIELD、WIND MEMORY、PHOTO SHEET、GATHER、CRUMPLE、PHOTO BALL、手動THROW、BOUNCE、球／写真の衝突、RELEASE、再集合をデッキごとに操作できます。H / C / T / B / U のキーを追加。
+- 顔解析・手指操作・音声解析・録画・CUE・プリセットは後続Phaseです。AI PROMPTは未接続と明記しています。
 
 設計: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。検証: [docs/VALIDATION.md](docs/VALIDATION.md)。

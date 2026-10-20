@@ -1,3 +1,6 @@
+import { PhotoPhysics } from "./photo-physics";
+import { PhysicsView, drawPhotoSheet } from "./physics-view";
+import { photoTimestamp } from "./physics-config";
 import { FrameEffects } from "./frame-effects";
 import { EffectChain } from "./effects";
 import type { ContentPlugin, RenderFrame, Photo, Deck, Mixer } from "./types";
@@ -23,7 +26,14 @@ export class Mosaic implements ContentPlugin {
   }
   render(
     ctx: CanvasRenderingContext2D,
-    { width: w, height: h, deck: d, beat, tileTransform }: RenderFrame,
+    {
+      width: w,
+      height: h,
+      deck: d,
+      beat,
+      tileTransform,
+      tileOrder,
+    }: RenderFrame,
   ) {
     const rows = Math.round((d.columns * h) / w),
       tw = w / d.columns,
@@ -135,7 +145,8 @@ export class Mosaic implements ContentPlugin {
     ctx.rotate((d.rotation * Math.PI) / 180);
     ctx.translate(-w / 2, -h / 2);
     const global = tileTransform ? ctx.getTransform() : undefined;
-    for (let id = 0; id < this.tiles.length; id++) {
+    for (let index = 0; index < this.tiles.length; index++) {
+      const id = tileOrder ? tileOrder[index] : index;
       const t = this.tiles[id];
       const dx = (t.x - d.columns / 2) * d.scatter * tw * 0.8,
         dy = (t.y - rows / 2) * d.scatter * th * 0.8;
@@ -145,6 +156,24 @@ export class Mosaic implements ContentPlugin {
         hh = Math.max(1, th - d.gap);
       if (tileTransform && global) {
         const transform = tileTransform(id, x + ww / 2, y + hh / 2);
+        const alpha = transform.alpha ?? 1;
+        const screenX =
+          global.a * transform.x + global.c * transform.y + global.e;
+        const screenY =
+          global.b * transform.x + global.d * transform.y + global.f;
+        const margin =
+          Math.max(ww, hh) *
+          transform.scale *
+          Math.hypot(global.a, global.b) *
+          2;
+        if (
+          alpha <= 0 ||
+          screenX < -margin ||
+          screenX > w + margin ||
+          screenY < -margin ||
+          screenY > h + margin
+        )
+          continue;
         const cosine = Math.cos(transform.rotation) * transform.scale;
         const sine = Math.sin(transform.rotation) * transform.scale;
         ctx.setTransform(
@@ -155,17 +184,38 @@ export class Mosaic implements ContentPlugin {
           global.a * transform.x + global.c * transform.y + global.e,
           global.b * transform.x + global.d * transform.y + global.f,
         );
-        ctx.drawImage(
-          this.atlas,
-          t.x * tw,
-          t.y * th,
-          ww,
-          hh,
-          -ww / 2,
-          -hh / 2,
-          ww,
-          hh,
-        );
+        const sheet = transform.sheet || 0;
+        const image =
+          this.images[
+            (transform.photo ?? id) % Math.max(1, this.images.length)
+          ];
+        if (sheet < 1 || !image) {
+          ctx.globalAlpha = alpha * (image ? 1 - sheet : 1);
+          ctx.drawImage(
+            this.atlas,
+            t.x * tw,
+            t.y * th,
+            ww,
+            hh,
+            -ww / 2,
+            -hh / 2,
+            ww,
+            hh,
+          );
+        }
+        if (sheet > 0 && image) {
+          ctx.globalAlpha = alpha * sheet;
+          drawPhotoSheet(
+            ctx,
+            image,
+            ww,
+            hh,
+            transform.bend || 0,
+            transform.curl || 0,
+            transform.segments || 1,
+          );
+        }
+        ctx.globalAlpha = 1;
         continue;
       }
       const img = this.images[t.photo];
@@ -206,6 +256,34 @@ export class Mosaic implements ContentPlugin {
 export class Renderer {
   decks = [new Mosaic(), new Mosaic()];
   effects = [new EffectChain(), new EffectChain()];
+  physics = [new PhotoPhysics(), new PhotoPhysics()];
+  physicsViews = this.physics.map((p) => new PhysicsView(p));
+  private physicsPhotoVersions = [-1, -1];
+  private requestedModes = ["off", "off"];
+  preparePhysics(i: number, deck: Deck) {
+    const p = this.physics[i];
+    p.config = deck.physics;
+    p.configure(this.canvas.width, this.canvas.height, deck.columns);
+    if (this.physicsPhotoVersions[i] !== this.decks[i].version) {
+      p.setTimestamps(
+        this.decks[i].photos.map((photo) => photoTimestamp(photo.capturedAt)),
+      );
+      this.physicsPhotoVersions[i] = this.decks[i].version;
+    }
+    return p;
+  }
+  activatePhysics(i: number, deck: Deck) {
+    const p = this.preparePhysics(i, deck),
+      effect = this.effects[i];
+    effect.configure(this.canvas.width, this.canvas.height, deck.columns);
+    if (!p.active) {
+      p.activate(effect.motion, deck.scatter);
+      effect.resetMotion();
+      deck.scatter = 0;
+    }
+    if (deck.physics.mode === "off") deck.physics.mode = "physics";
+    return p;
+  }
   frameEffects = [new FrameEffects(), new FrameEffects()];
   dirtyKeys = ["", ""];
   private wasAnimating = [false, false];
@@ -238,6 +316,7 @@ export class Renderer {
   render(settings: Deck[], mix: Mixer, beat: number, time: number) {
     if (mix.freeze) {
       this.effects.forEach((e) => e.pause(time, beat));
+      this.physics.forEach((p) => p.pause(time, beat));
       return;
     }
     const { width: w, height: h } = this.canvas;
@@ -246,9 +325,40 @@ export class Renderer {
         b.width = w;
         b.height = h;
       }
+      const d = settings[i],
+        p = this.preparePhysics(i, d);
+      if (d.physics.mode !== "off" && !p.active) this.activatePhysics(i, d);
+      if (d.physics.mode === "memory" && this.requestedModes[i] !== "memory")
+        p.memoryField();
+      if (
+        d.physics.mode === "physics" &&
+        this.requestedModes[i] === "memory" &&
+        p.state === "FLOATING"
+      )
+        p.setState("FREE");
+      if (d.physics.mode === "off" && p.active && p.state !== "ASSEMBLING")
+        p.assemble(d.effects.assemble.mode);
+      this.requestedModes[i] = d.physics.mode;
+      p.compatibleWind =
+        d.physics.windMode === "physics" && d.effects.wind.enabled
+          ? {
+              ...d.physics.wind,
+              ...d.effects.wind,
+              strength: d.effects.wind.amount,
+            }
+          : undefined;
+      if (p.active) p.step(time, beat);
+      else p.pause(time, beat);
       const effects = this.effects[i];
       effects.configure(w, h, settings[i].columns);
-      effects.begin(settings[i].effects, time, beat);
+      const effectConfig =
+        p.active && d.physics.windMode === "physics"
+          ? { ...d.effects, wind: { ...d.effects.wind, enabled: false } }
+          : d.effects;
+      effects.begin(effectConfig, time, beat);
+      this.physicsViews[i].effect = effects.tileActive
+        ? effects.transform
+        : undefined;
       const key = JSON.stringify([
         w,
         h,
@@ -257,6 +367,7 @@ export class Renderer {
         settings[i].image?.src,
       ]);
       if (
+        p.active ||
         effects.active ||
         this.wasAnimating[i] ||
         settings[i].scatter > 0 ||
@@ -268,11 +379,16 @@ export class Renderer {
           deck: settings[i],
           beat,
           time,
-          tileTransform: effects.tileActive ? effects.transform : undefined,
+          tileTransform: p.active
+            ? this.physicsViews[i].transform
+            : effects.tileActive
+              ? effects.transform
+              : undefined,
+          tileOrder: p.active ? p.order : undefined,
         });
         this.frameEffects[i].apply(b, settings[i].effects, time, beat);
         this.dirtyKeys[i] = key;
-        this.wasAnimating[i] = effects.active;
+        this.wasAnimating[i] = p.active || effects.active;
       }
     });
     const [a, b] = mix.swap ? [this.buffers[1], this.buffers[0]] : this.buffers;

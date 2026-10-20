@@ -1,5 +1,42 @@
 # 検証報告
 
+## Phase 3: 3D / Photo Physics
+
+検証日: 2026-10-20 (JST)。Node.js 24.19.0、Chromium 154 headless、1280×720。以下はローカルの本番ビルド実測です。
+
+- 基準: main `ea379fb`、単体27件、描画エンジン10項目、Phase 1ブラウザ14項目、Phase 2ブラウザ28項目が成功。基準状態では公開Pages/APIへのローカル接続が環境プロキシ403で拒否されました。公開後の検証は下記CIにも組み込みました。
+- 実装後: 単体57件（従来27件＋Physics30件）、型検査・本番ビルド・書式検査が成功。
+- 従来の描画エンジン10項目、Phase 1ブラウザ14項目、Phase 2ブラウザ28項目を維持し、本番ビルドで成功。静止モザイクは60fps表示、Phase 2のFLOAT/WAVE/PULSEは100枚39.7fps、1,000枚38.6fps、さらにGLITCH/RGB SHIFT併用で23.1fpsでした。基準時の試行変動範囲内です。
+- Phase 3ブラウザ35項目が成功。A/B各デッキでMEMORYデモとPHOTO BALLデモを完走し、元の「風」モザイクの画素ハッシュへ戻ることを確認。
+- UIだけでなく、public APIから実際のposition / velocity / depth / bend / rotation / ball / stateを読み、canvasの時間変化と突き合わせました。
+- Physics Engineの単体検証には、初期化、時刻→奥行き、3軸風、中心・ポインタ吸引、球化、四辺の反射、重力、減衰、反発係数>1、摩擦、角速度、squash、球／写真の衝突、風と質量、ドラッグ速度、再展開、全ASSEMBLE方式、操作予約、RESET、格子変更、操作中断、カメラ連続性を含みます。
+- Controller / Outputの完成フレーム比較は、JPEG圧縮後の平均チャンネル誤差1.18/255。FREEZEで物理状態と画素が停止することも検証。実行時例外0件。
+- 390px幅で新パネル・ライブ操作ボタンに横方向のオーバーフローがないことを確認。
+
+### Phase 3負荷試験
+
+16種類の生成JPEGを複製し、ファイル入力から100枚、その後900枚を追加しました。物理プールは48列・1,296要素、写真空間では各写真の代表シートを使用。品質AUTO、各計測3秒、Controllerを前面にしています。物理頻度や写真の表示密度が異なるため、品質レベルも併記します。
+
+| 写真数 | シーン                             |  FPS | p95フレーム時間 | 終了時品質 |
+| ------ | ---------------------------------- | ---: | --------------: | ---------- |
+| 100    | MEMORY FIELD + CAMERA AUTO + FLOAT | 60.3 |          16.7ms | HIGH       |
+| 1,000  | MEMORY FIELD + CAMERA AUTO         | 54.4 |          33.3ms | MEDIUM     |
+| 1,000  | WIND MEMORY                        | 34.9 |          33.4ms | MEDIUM     |
+| 1,000  | PHOTO BALL + BOUNCE                | 60.0 |          16.8ms | MEDIUM     |
+| 1,000  | BALL + FREE SHEETS / collision     | 60.0 |          16.7ms | HIGH       |
+
+60fps保証や長時間ライブの結果ではありません。実測項目と品質値は [phase3-test-results.json](phase3-test-results.json) を参照してください。CPU/GPU、解像度、表示写真密度、Phase 2画像後処理の併用で変動します。
+
+### CI・公開後検証
+
+Pagesワークフローで全ブラウザ試験を実行後に公開します。その後さらに、公開されたindex / Controller / OutputのHTMLと参照JS/CSSを今回のdistと照合し、公開URL上でPhase 1 / 2 / 3ブラウザ試験を実行するステップを追加しました。配信確認にはコミットSHAのクエリを用い、CDN伝播を待ちます。成果物は `browser-test-results` と `published-test-results` に14日間保存します。各実行の成否はActionsで確認してください。
+
+### 制約・未実装
+
+2.5Dの独自軽量物理・紙の疑似変形です。完全な布、全写真の3D剛体、写真同士の衝突は実装していません。球の表面には表示LODを適用します。Outputは最大30fps・JPEG転送です。実写真・実プロジェクター・長時間ライブは未検証。MediaPipe、ジェスチャー、顔加工、音声解析、自動BPM、CUE、タイムライン、AI生成、録画、歌詞・楽曲データは追加していません。
+
+操作・API: [PHASE3.md](PHASE3.md)。
+
 ## Phase 2: Dynamic Photo FX
 
 検証日: 2026-10-20 (JST)。Node.js 24.19.0、Chromium 154.0.8037.57 headless、1280×720、48列・1,296タイル。ローカルの本番ビルドで検証しました。

@@ -536,3 +536,59 @@ canvas:fullscreen {
 .effects-panel button {
   width: 100%;
 }
+
+.physics-performance {
+  border: 1px solid var(--line);
+  background: #10151b;
+  padding: 10px;
+  margin: 12px 0;
+  border-radius: 5px;
+}
+.physics-heading {
+  font: 9px monospace;
+  color: var(--accent);
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.physics-heading output {
+  color: #bda7fa;
+}
+.physics-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+.physics-buttons button {
+  padding: 8px 2px;
+  font-size: 9px;
+}
+.physics-reset {
+  margin-top: 6px;
+  width: 100%;
+  padding: 6px;
+  font-size: 9px;
+}
+.physics-performance small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font: 9px monospace;
+}
+.physics-panel > summary {
+  color: #bda7fa;
+  font-weight: 700;
+}
+.physics-panel label {
+  flex-wrap: wrap;
+}
+.physics-panel label input[type="range"] {
+  flex: 1;
+  max-width: 55%;
+}
+.physics-panel output {
+  font: 10px monospace;
+  min-width: 28px;
+  text-align: right;
+}

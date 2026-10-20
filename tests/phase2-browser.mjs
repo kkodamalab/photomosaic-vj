@@ -1,3 +1,4 @@
+import { testUrl } from "./test-url.mjs";
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
@@ -28,7 +29,7 @@ try {
   });
   const page = await context.newPage();
   page.on("pageerror", (e) => errors.push(String(e)));
-  await page.goto(new URL("controller.html", base).href);
+  await page.goto(testUrl("controller.html", base));
   await page.waitForSelector("#preview");
   await page.evaluate(() =>
     document
@@ -318,7 +319,7 @@ try {
   pass("FREEZE holds complete effect composite");
   const output = await context.newPage();
   output.on("pageerror", (e) => errors.push(String(e)));
-  await output.goto(new URL("screen.html", base).href);
+  await output.goto(testUrl("screen.html", base));
   const outputHash = () =>
     output.locator("canvas").evaluate((c) => {
       const p = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
@@ -419,6 +420,7 @@ try {
     JSON.stringify(
       {
         browser: browser.version(),
+        deploymentSha: process.env.DEPLOY_SHA || null,
         base,
         results,
         errors,

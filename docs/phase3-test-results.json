@@ -1,0 +1,75 @@
+{
+  "browser": "154.0.8037.57",
+  "base": "http://127.0.0.1:4173/photomosaic-vj/",
+  "results": [
+    "Physics pool initializes with stable home positions; default OFF preserves mosaic",
+    "Deck A MEMORY FIELD unfolds actual sheet depth",
+    "Deck A CAMERA AUTO changes projected frames",
+    "Deck A WIND MEMORY + GUST moves/bends/rotates photo sheets",
+    "Deck A DEMO A: MEMORY → CAMERA → WIND → ASSEMBLE restores mosaic",
+    "Deck B MEMORY FIELD unfolds actual sheet depth",
+    "Deck B CAMERA AUTO changes projected frames",
+    "Deck B WIND MEMORY + GUST moves/bends/rotates photo sheets",
+    "Deck B DEMO A: MEMORY → CAMERA → WIND → ASSEMBLE restores mosaic",
+    "Deck A EXPLOSION → GATHER forms a cluster without teleportation",
+    "Deck A CRUMPLE creates visible photo-fragment BALL",
+    "pointer DRAG / RELEASE moves ball and retains throw velocity",
+    "Deck A THROW → BOUNCE changes trajectory and spin",
+    "Deck A WIND changes heavy ball trajectory",
+    "Deck A RELEASE unfolds free sheets before assembly",
+    "Deck A DEMO B complete: mosaic → explosion → gather → crumple → throw → bounce → wind → release → SWIRL → mosaic",
+    "Deck B EXPLOSION → GATHER forms a cluster without teleportation",
+    "Deck B CRUMPLE creates visible photo-fragment BALL",
+    "Deck B THROW → BOUNCE changes trajectory and spin",
+    "Deck B WIND changes heavy ball trajectory",
+    "Deck B RELEASE unfolds free sheets before assembly",
+    "Deck B DEMO B complete: mosaic → explosion → gather → crumple → throw → bounce → wind → release → SWIRL → mosaic",
+    "POINTER GATHER attracts sheets to the clicked preview position",
+    "DIRECT physics ASSEMBLE returns to exact mosaic",
+    "SPRING physics ASSEMBLE returns to exact mosaic",
+    "SWIRL physics ASSEMBLE returns to exact mosaic",
+    "legacy WIND PHYSICS compatibility and RESET failsafe",
+    "C / T / B / H / U shortcuts and input focus protection",
+    "NEXT BEAT executes CRUMPLE only at Transport boundary",
+    "NEXT BAR queue and immediate RESET cancellation",
+    "Phase 2 PULSE + RGB SHIFT compose with 2.5D physics",
+    "FREEZE holds physics; Controller / Output share the same physical frame",
+    "1000-photo MEMORY / WIND / BALL / collision / RELEASE / ASSEMBLE stress sequence",
+    "PHYSICS panel and live buttons fit mobile width",
+    "no browser runtime exceptions"
+  ],
+  "errors": [],
+  "performanceResults": [
+    {
+      "name": "100 photos / MEMORY FIELD + CAMERA AUTO + FLOAT",
+      "fps": 60.32528996134223,
+      "p95FrameMs": 16.700000000000728,
+      "quality": 0
+    },
+    {
+      "name": "1000 photos / MEMORY FIELD + CAMERA AUTO",
+      "fps": 54.43441317048272,
+      "p95FrameMs": 33.30000000000291,
+      "quality": 1
+    },
+    {
+      "name": "1000 photos / WIND MEMORY",
+      "fps": 34.92549228313801,
+      "p95FrameMs": 33.400000000001455,
+      "quality": 1
+    },
+    {
+      "name": "1000 photos / PHOTO BALL + BOUNCE",
+      "fps": 60.00729370422185,
+      "p95FrameMs": 16.80000000000291,
+      "quality": 1
+    },
+    {
+      "name": "1000 photos / BALL + FREE SHEETS / collision",
+      "fps": 59.96402158705527,
+      "p95FrameMs": 16.70000000001164,
+      "quality": 0
+    }
+  ],
+  "outputMeanChannelError": 1.176111111111111
+}
